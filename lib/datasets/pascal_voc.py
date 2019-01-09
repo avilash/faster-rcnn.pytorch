@@ -44,13 +44,15 @@ class pascal_voc(imdb):
         self._image_set = image_set
         self._devkit_path = self._get_default_path() if devkit_path is None \
             else devkit_path
-        self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
+        # self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
+        self._data_path = self._devkit_path
         self._classes = ('__background__',  # always index 0
-                         'aeroplane', 'bicycle', 'bird', 'boat',
-                         'bottle', 'bus', 'car', 'cat', 'chair',
-                         'cow', 'diningtable', 'dog', 'horse',
-                         'motorbike', 'person', 'pottedplant',
-                         'sheep', 'sofa', 'train', 'tvmonitor')
+                         # 'aeroplane', 'bicycle', 'bird', 'boat',
+                         # 'bottle', 'bus', 'car', 'cat', 'chair',
+                         # 'cow', 'diningtable', 'dog', 'horse',
+                         # 'motorbike', 'person', 'pottedplant',
+                         # 'sheep', 'sofa', 'train', 'tvmonitor')
+                         '1')
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
@@ -113,7 +115,8 @@ class pascal_voc(imdb):
         """
         Return the default path where PASCAL VOC is expected to be installed.
         """
-        return os.path.join(cfg.DATA_DIR, 'VOCdevkit' + self._year)
+        # return os.path.join(cfg.DATA_DIR, 'VOCdevkit' + self._year)
+        return cfg.DATA_DIR
 
     def gt_roidb(self):
         """
@@ -231,10 +234,10 @@ class pascal_voc(imdb):
         for ix, obj in enumerate(objs):
             bbox = obj.find('bndbox')
             # Make pixel indexes 0-based
-            x1 = float(bbox.find('xmin').text) - 1
-            y1 = float(bbox.find('ymin').text) - 1
-            x2 = float(bbox.find('xmax').text) - 1
-            y2 = float(bbox.find('ymax').text) - 1
+            x1 = float(bbox.find('xmin').text) - 0
+            y1 = float(bbox.find('ymin').text) - 0
+            x2 = float(bbox.find('xmax').text) - 0
+            y2 = float(bbox.find('ymax').text) - 0
 
             diffc = obj.find('difficult')
             difficult = 0 if diffc == None else int(diffc.text)
@@ -263,7 +266,8 @@ class pascal_voc(imdb):
     def _get_voc_results_file_template(self):
         # VOCdevkit/results/VOC2007/Main/<comp_id>_det_test_aeroplane.txt
         filename = self._get_comp_id() + '_det_' + self._image_set + '_{:s}.txt'
-        filedir = os.path.join(self._devkit_path, 'results', 'VOC' + self._year, 'Main')
+        # filedir = os.path.join(self._devkit_path, 'results', 'VOC' + self._year, 'Main')
+        filedir = os.path.join(self._devkit_path, 'results', 'Main')
         if not os.path.exists(filedir):
             os.makedirs(filedir)
         path = os.path.join(filedir, filename)
@@ -290,12 +294,12 @@ class pascal_voc(imdb):
     def _do_python_eval(self, output_dir='output'):
         annopath = os.path.join(
             self._devkit_path,
-            'VOC' + self._year,
+            # 'VOC' + self._year,
             'Annotations',
             '{:s}.xml')
         imagesetfile = os.path.join(
             self._devkit_path,
-            'VOC' + self._year,
+            # 'VOC' + self._year,
             'ImageSets',
             'Main',
             self._image_set + '.txt')
