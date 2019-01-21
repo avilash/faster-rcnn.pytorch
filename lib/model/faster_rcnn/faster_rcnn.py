@@ -36,7 +36,7 @@ class _fasterRCNN(nn.Module):
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
 
-    def forward(self, im_data, im_info, gt_boxes, num_boxes):
+    def forward(self, im_data, im_info, gt_boxes, num_boxes, d_im_data=None):
         batch_size = im_data.size(0)
 
         im_info = im_info.data
@@ -44,7 +44,13 @@ class _fasterRCNN(nn.Module):
         num_boxes = num_boxes.data
 
         # feed image data to base model to obtain base feature map
-        base_feat = self.RCNN_base(im_data)
+        if cfg.DEPTH:
+            im_feat = self.RCNN_base(im_data)
+            d_im_feat = self.RCNN_base(d_im_data)
+            concat_feat = torch.cat((im_feat, d_im_feat), dim=1)
+            base_feat = self.RCNN_concat(concat_feat)
+        else:
+            base_feat = self.RCNN_base(im_data)
 
         # feed base feature map tp RPN to obtain rois
         rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(base_feat, im_info, gt_boxes, num_boxes)
@@ -130,6 +136,8 @@ class _fasterRCNN(nn.Module):
         normal_init(self.RCNN_rpn.RPN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
+        if cfg.DEPTH:
+            normal_init(self.RCNN_concat, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
     def create_architecture(self):
         self._init_modules()

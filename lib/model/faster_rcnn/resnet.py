@@ -238,6 +238,9 @@ class resnet(_fasterRCNN):
     self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
+    if cfg.DEPTH:
+      self.RCNN_concat = nn.Conv2d(2048, 1024, 3)
+
     self.RCNN_top = nn.Sequential(resnet.layer4)
 
     self.RCNN_cls_score = nn.Linear(2048, self.n_classes)

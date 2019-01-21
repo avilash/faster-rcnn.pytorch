@@ -32,7 +32,22 @@ def im_list_to_blob(ims):
 
     return blob
 
-def prep_im_for_blob(im, pixel_means, target_size, max_size):
+def d_im_list_to_blob(ims):
+    """Convert a list of depth images into a network input.
+
+    Assumes images are already prepared (means subtracted, ...).
+    """
+    max_shape = np.array([im.shape for im in ims]).max(axis=0)
+    num_images = len(ims)
+    blob = np.zeros((num_images, max_shape[0], max_shape[1]),
+                    dtype=np.float32)
+    for i in xrange(num_images):
+        im = ims[i]
+        blob[i, 0:im.shape[0], 0:im.shape[1]] = im
+
+    return blob
+
+def prep_im_for_blob(im, pixel_means, target_size, max_size, d_im=None):
     """Mean subtract and scale an image for use in a blob."""
 
     im = im.astype(np.float32, copy=False)
@@ -48,5 +63,14 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
     # im = imresize(im, im_scale)
     im = cv2.resize(im, None, None, fx=im_scale, fy=im_scale,
                     interpolation=cv2.INTER_LINEAR)
+
+    if d_im is not None:
+        d_pixel_means = np.array([[127.5]])
+        d_im = d_im.astype(np.float32, copy=False)
+        d_im -= d_pixel_means
+        d_im = cv2.resize(d_im, None, None, fx=im_scale, fy=im_scale,
+                        interpolation=cv2.INTER_LINEAR)
+
+        return im, d_im, im_scale
 
     return im, im_scale

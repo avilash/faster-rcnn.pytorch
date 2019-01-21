@@ -141,7 +141,8 @@ if __name__ == '__main__':
 
   print('{:d} roidb entries'.format(len(roidb)))
 
-  input_dir = args.load_dir + "/" + args.net + "/" + args.dataset
+  # input_dir = args.load_dir + "/" + args.net + "/" + args.dataset
+  input_dir = os.path.join(cfg.EXP_DIR, args.net, args.dataset)
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
@@ -172,6 +173,7 @@ if __name__ == '__main__':
   print('load model successfully!')
   # initilize the tensor holder here.
   im_data = torch.FloatTensor(1)
+  d_im_data = torch.FloatTensor(1)
   im_info = torch.FloatTensor(1)
   num_boxes = torch.LongTensor(1)
   gt_boxes = torch.FloatTensor(1)
@@ -179,12 +181,14 @@ if __name__ == '__main__':
   # ship to cuda
   if args.cuda:
     im_data = im_data.cuda()
+    d_im_data = d_im_data.cuda()
     im_info = im_info.cuda()
     num_boxes = num_boxes.cuda()
     gt_boxes = gt_boxes.cuda()
 
   # make variable
   im_data = Variable(im_data)
+  d_im_data = Variable(d_im_data)
   im_info = Variable(im_info)
   num_boxes = Variable(num_boxes)
   gt_boxes = Variable(gt_boxes)
@@ -227,16 +231,27 @@ if __name__ == '__main__':
   for i in range(num_images):
 
       data = next(data_iter)
-      im_data.data.resize_(data[0].size()).copy_(data[0])
-      im_info.data.resize_(data[1].size()).copy_(data[1])
-      gt_boxes.data.resize_(data[2].size()).copy_(data[2])
-      num_boxes.data.resize_(data[3].size()).copy_(data[3])
-
       det_tic = time.time()
-      rois, cls_prob, bbox_pred, \
-      rpn_loss_cls, rpn_loss_box, \
-      RCNN_loss_cls, RCNN_loss_bbox, \
-      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      if cfg.DEPTH:
+          im_data.data.resize_(data[0].size()).copy_(data[0])
+          d_im_data.data.resize_(data[1].size()).copy_(data[1])
+          im_info.data.resize_(data[2].size()).copy_(data[2])
+          gt_boxes.data.resize_(data[3].size()).copy_(data[3])
+          num_boxes.data.resize_(data[4].size()).copy_(data[4])
+          rois, cls_prob, bbox_pred, \
+          rpn_loss_cls, rpn_loss_box, \
+          RCNN_loss_cls, RCNN_loss_bbox, \
+          rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, d_im_data=d_im_data)
+      else:
+          im_data.data.resize_(data[0].size()).copy_(data[0])
+          im_info.data.resize_(data[1].size()).copy_(data[1])
+          gt_boxes.data.resize_(data[2].size()).copy_(data[2])
+          num_boxes.data.resize_(data[3].size()).copy_(data[3])
+          rois, cls_prob, bbox_pred, \
+          rpn_loss_cls, rpn_loss_box, \
+          RCNN_loss_cls, RCNN_loss_bbox, \
+          rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+
 
       scores = cls_prob.data
       boxes = rois.data[:, :, 1:5]
@@ -261,7 +276,10 @@ if __name__ == '__main__':
           # Simply repeat the boxes, once for each class
           pred_boxes = np.tile(boxes, (1, scores.shape[1]))
 
-      pred_boxes /= data[1][0][2].item()
+      if cfg.DEPTH:
+          pred_boxes /= data[2][0][2].item()
+      else:
+        pred_boxes /= data[1][0][2].item()
 
       scores = scores.squeeze()
       pred_boxes = pred_boxes.squeeze()

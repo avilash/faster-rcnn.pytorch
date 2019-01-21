@@ -14,7 +14,7 @@ import numpy as np
 import numpy.random as npr
 from scipy.misc import imread
 from model.utils.config import cfg
-from model.utils.blob import prep_im_for_blob, im_list_to_blob
+from model.utils.blob import prep_im_for_blob, im_list_to_blob, d_im_list_to_blob
 import pdb
 def get_minibatch(roidb, num_classes):
   """Given a roidb, construct a minibatch sampled from it."""
@@ -27,9 +27,13 @@ def get_minibatch(roidb, num_classes):
     format(num_images, cfg.TRAIN.BATCH_SIZE)
 
   # Get the input image blob, formatted for caffe
-  im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
 
-  blobs = {'data': im_blob}
+  if cfg.DEPTH:
+    im_blob, im_d_blob, im_scales = _get_depth_image_blob(roidb, random_scale_inds)
+    blobs = {'data': im_blob, 'data_d': im_d_blob}
+  else:
+    im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
+    blobs = {'data': im_blob}
 
   assert len(im_scales) == 1, "Single batch only"
   assert len(roidb) == 1, "Single batch only"
@@ -84,3 +88,40 @@ def _get_image_blob(roidb, scale_inds):
   blob = im_list_to_blob(processed_ims)
 
   return blob, im_scales
+
+def _get_depth_image_blob(roidb, scale_inds):
+  """Builds an input blob from the images in the roidb at the specified
+  scales.
+  """
+  num_images = len(roidb)
+
+  processed_ims = []
+  processed_d_ims = []
+  im_scales = []
+  for i in range(num_images):
+    #im = cv2.imread(roidb[i]['image'])
+    im = imread(roidb[i]['image'])
+    d_im = imread(roidb[i]['image_d'], flatten=True)
+
+    if len(im.shape) == 2:
+      im = im[:,:,np.newaxis]
+      im = np.concatenate((im,im,im), axis=2)
+    # flip the channel, since the original one using cv2
+    # rgb -> bgr
+    im = im[:,:,::-1]
+
+    if roidb[i]['flipped']:
+      im = im[:, ::-1, :]
+      d_im = d_im[:, ::-1]
+    target_size = cfg.TRAIN.SCALES[scale_inds[i]]
+    im, d_im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
+                                    cfg.TRAIN.MAX_SIZE, d_im=d_im)
+    im_scales.append(im_scale)
+    processed_ims.append(im)
+    processed_d_ims.append(d_im)
+
+  # Create a blob to hold the input images
+  blob = im_list_to_blob(processed_ims)
+  blob_d = d_im_list_to_blob(processed_d_ims)
+
+  return blob, blob_d, im_scales

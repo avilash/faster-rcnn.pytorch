@@ -44,13 +44,15 @@ class pascal_voc(imdb):
         self._image_set = image_set
         self._devkit_path = self._get_default_path() if devkit_path is None \
             else devkit_path
-        self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
+        # self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
+        self._data_path = self._devkit_path
         self._classes = ('__background__',  # always index 0
-                         'aeroplane', 'bicycle', 'bird', 'boat',
-                         'bottle', 'bus', 'car', 'cat', 'chair',
-                         'cow', 'diningtable', 'dog', 'horse',
-                         'motorbike', 'person', 'pottedplant',
-                         'sheep', 'sofa', 'train', 'tvmonitor')
+                         # 'aeroplane', 'bicycle', 'bird', 'boat',
+                         # 'bottle', 'bus', 'car', 'cat', 'chair',
+                         # 'cow', 'diningtable', 'dog', 'horse',
+                         # 'motorbike', 'person', 'pottedplant',
+                         # 'sheep', 'sofa', 'train', 'tvmonitor')
+                         '1')
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
@@ -79,6 +81,12 @@ class pascal_voc(imdb):
         """
         return self.image_path_from_index(self._image_index[i])
 
+    def depth_image_path_at(self, i):
+        """
+        Return the absolute path to depth image i in the image sequence.
+        """
+        return self.depth_image_path_from_index(self._image_index[i])
+
     def image_id_at(self, i):
         """
         Return the absolute path to image i in the image sequence.
@@ -91,6 +99,16 @@ class pascal_voc(imdb):
         """
         image_path = os.path.join(self._data_path, 'JPEGImages',
                                   index + self._image_ext)
+        assert os.path.exists(image_path), \
+            'Path does not exist: {}'.format(image_path)
+        return image_path
+
+    def depth_image_path_from_index(self, index):
+        """
+        Construct a depth image path from the image's "index" identifier.
+        """
+        image_path = os.path.join(self._data_path, 'Depth',
+                                  index + '_depth.png')
         assert os.path.exists(image_path), \
             'Path does not exist: {}'.format(image_path)
         return image_path
@@ -113,7 +131,8 @@ class pascal_voc(imdb):
         """
         Return the default path where PASCAL VOC is expected to be installed.
         """
-        return os.path.join(cfg.DATA_DIR, 'VOCdevkit' + self._year)
+        # return os.path.join(cfg.DATA_DIR, 'VOCdevkit' + self._year)
+        return cfg.DATA_DIR 
 
     def gt_roidb(self):
         """
@@ -231,8 +250,8 @@ class pascal_voc(imdb):
         for ix, obj in enumerate(objs):
             bbox = obj.find('bndbox')
             # Make pixel indexes 0-based
-            x1 = float(bbox.find('xmin').text) - 1
-            y1 = float(bbox.find('ymin').text) - 1
+            x1 = float(bbox.find('xmin').text) + 1
+            y1 = float(bbox.find('ymin').text) + 1
             x2 = float(bbox.find('xmax').text) - 1
             y2 = float(bbox.find('ymax').text) - 1
 
@@ -289,13 +308,11 @@ class pascal_voc(imdb):
 
     def _do_python_eval(self, output_dir='output'):
         annopath = os.path.join(
-            self._devkit_path,
-            'VOC' + self._year,
+            self._data_path,
             'Annotations',
             '{:s}.xml')
         imagesetfile = os.path.join(
-            self._devkit_path,
-            'VOC' + self._year,
+            self._data_path,
             'ImageSets',
             'Main',
             self._image_set + '.txt')

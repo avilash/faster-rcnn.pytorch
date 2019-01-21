@@ -66,6 +66,8 @@ class roibatchLoader(data.Dataset):
     minibatch_db = [self._roidb[index_ratio]]
     blobs = get_minibatch(minibatch_db, self._num_classes)
     data = torch.from_numpy(blobs['data'])
+    if cfg.DEPTH:
+      data_d = torch.from_numpy(blobs['data_d'])
     im_info = torch.from_numpy(blobs['im_info'])
     # we need to random shuffle the bounding box.
     data_height, data_width = data.size(1), data.size(2)
@@ -113,6 +115,8 @@ class roibatchLoader(data.Dataset):
                             y_s = np.random.choice(range(min_y, min_y+y_s_add))
                 # crop the image
                 data = data[:, y_s:(y_s + trim_size), :, :]
+                if cfg.DEPTH:
+                    data_d = data_d[:, y_s:(y_s + trim_size), :]
 
                 # shift y coordiante of gt_boxes
                 gt_boxes[:, 1] = gt_boxes[:, 1] - float(y_s)
@@ -149,6 +153,8 @@ class roibatchLoader(data.Dataset):
                             x_s = np.random.choice(range(min_x, min_x+x_s_add))
                 # crop the image
                 data = data[:, :, x_s:(x_s + trim_size), :]
+                if cfg.DEPTH:
+                    data_d = data_d[:, :, x_s:(x_s + trim_size)]
 
                 # shift x coordiante of gt_boxes
                 gt_boxes[:, 0] = gt_boxes[:, 0] - float(x_s)
@@ -164,8 +170,12 @@ class roibatchLoader(data.Dataset):
 
             padding_data = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
                                              data_width, 3).zero_()
-
             padding_data[:data_height, :, :] = data[0]
+
+            if cfg.DEPTH:
+                padding_data_d = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
+                                                   data_width).zero_()
+                padding_data_d[:data_height, :] = data_d[0]
             # update im_info
             im_info[0, 0] = padding_data.size(0)
             # print("height %d %d \n" %(index, anchor_idx))
@@ -175,11 +185,20 @@ class roibatchLoader(data.Dataset):
             padding_data = torch.FloatTensor(data_height, \
                                              int(np.ceil(data_height * ratio)), 3).zero_()
             padding_data[:, :data_width, :] = data[0]
+
+            if cfg.DEPTH:
+                padding_data_d = torch.FloatTensor(data_height, \
+                                                 int(np.ceil(data_height * ratio))).zero_()
+                padding_data_d[:, :data_width] = data_d[0]
+
             im_info[0, 1] = padding_data.size(1)
         else:
             trim_size = min(data_height, data_width)
             padding_data = torch.FloatTensor(trim_size, trim_size, 3).zero_()
             padding_data = data[0][:trim_size, :trim_size, :]
+            if cfg.DEPTH:
+                padding_data_d = torch.FloatTensor(trim_size, trim_size).zero_()
+                padding_data_d = data_d[0][:trim_size, :trim_size]
             # gt_boxes.clamp_(0, trim_size)
             gt_boxes[:, :4].clamp_(0, trim_size)
             im_info[0, 0] = trim_size
@@ -200,17 +219,27 @@ class roibatchLoader(data.Dataset):
 
             # permute trim_data to adapt to downstream processing
         padding_data = padding_data.permute(2, 0, 1).contiguous()
+        if cfg.DEPTH:
+            padding_data_d = padding_data_d.repeat(3,1,1)
         im_info = im_info.view(3)
 
-        return padding_data, im_info, gt_boxes_padding, num_boxes
+        if cfg.DEPTH:
+            return padding_data, padding_data_d, im_info, gt_boxes_padding, num_boxes
+        else:
+            return padding_data, im_info, gt_boxes_padding, num_boxes
     else:
         data = data.permute(0, 3, 1, 2).contiguous().view(3, data_height, data_width)
+        if cfg.DEPTH:
+            data_d = data_d.repeat(3,1,1)
         im_info = im_info.view(3)
 
         gt_boxes = torch.FloatTensor([1,1,1,1,1])
         num_boxes = 0
 
-        return data, im_info, gt_boxes, num_boxes
+        if cfg.DEPTH:
+            return data, data_d, im_info, gt_boxes, num_boxes
+        else:
+            return data, im_info, gt_boxes, num_boxes
 
   def __len__(self):
     return len(self._roidb)
