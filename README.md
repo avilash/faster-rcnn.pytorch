@@ -1,5 +1,10 @@
 # A *Faster* Pytorch Implementation of Faster R-CNN
 
+## About the Fork
+
+* This fork builds upon faster-rcnn to train on RGB-D inputs. It is implemented as a two stream model with a convolutional layer to concatenate the imputs just before the pooling layer. Relevant code in the [depth_frcnn](https://github.com/avilash/faster-rcnn.pytorch/tree/depth_frcnn) branch
+* The [pytorch-1.0](https://github.com/avilash/faster-rcnn.pytorch/tree/pytorch-1.0) branch has an http server which runs object detection as a service
+
 ## Introduction
 
 ### :boom: Good news! This repo supports pytorch-1.0 now!!! We borrowed some code and techniques from [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark). Just go to pytorch-1.0 branch!
