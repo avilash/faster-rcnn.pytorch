@@ -1,0 +1,11 @@
+version: '2.3'
+services:
+  app:
+    container_name: app 
+    restart: always
+    build: .
+    runtime: nvidia
+    volumes:
+      - .:/faster_rcnn
+      - <local model path>:/faster_rcnn/prod_models/model.pth
+    command: python alive.py

@@ -83,7 +83,7 @@ def _get_image_blob(im):
 def runDetection(class_name, im, vis=False):
   max_per_image = 100
   thresh = 0.05
-  detect_thresh = 0.5
+  detect_thresh = 0.7
   cls_dets = None
 
   im_in = im
@@ -136,8 +136,9 @@ def runDetection(class_name, im, vis=False):
         continue
     else:
       cls_ind = np.where(pascal_classes==class_name)
+      cls_ind = cls_ind[0][0]
       if cls_ind != j:
-        pass
+        continue
     inds = torch.nonzero(scores[:,j]>thresh).view(-1)
     # if there is det
     if inds.numel() > 0:
@@ -185,6 +186,7 @@ pascal_classes = np.asarray(['__background__',
                      # 'motorbike', 'person', 'pottedplant',
                      # 'sheep', 'sofa', 'train', 'tvmonitor'])
                      '1'])
+                     # '51', '52', '54', '55', '58', '61', '62', '63', '64', '65', '66', '68', '69', '70', '71', '72', '74', '75', '76', '78', '79'])
 
 # Network Init
 fasterRCNN = resnet(pascal_classes, 101, pretrained=False, class_agnostic=False)
@@ -193,7 +195,7 @@ fasterRCNN.cuda()
 fasterRCNN.eval()
 
 # Load weights
-load_name = 'models/res101/pascal_voc/faster_rcnn_1_8_215.pth'
+load_name = 'prod_models/model.pth'
 print("load checkpoint %s" % (load_name))
 checkpoint = torch.load(load_name)
 fasterRCNN.load_state_dict(checkpoint['model'])
@@ -231,6 +233,7 @@ def detect():
   im_file = request.files['file']
   print("Detecting object - ", class_name, ", in image ", im_file.filename)
   im = cv2.imdecode(np.fromstring(im_file.read(), np.uint8), cv2.IMREAD_COLOR)
+  im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
   result = runDetection(str(class_name), im, vis=True)
   return json.dumps(result), 200
 
