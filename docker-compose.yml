@@ -5,7 +5,9 @@ services:
     restart: always
     build: .
     runtime: nvidia
+    ports:
+      - 9191:9191
     volumes:
       - .:/faster_rcnn
       - <local model path>:/faster_rcnn/prod_models/model.pth
-    command: python alive.py
+    command: python obj_detect.py
