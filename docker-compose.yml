@@ -7,6 +7,5 @@ services:
     ports:
       - 9191:9191
     volumes:
-      - .:/faster_rcnn
-      - <local model path>:/faster_rcnn/prod_models/model.pth
-    command: python obj_detect.py
+      - ${MODEL_PATH}:/app/prod_models/model.pth
+    command: python obj_detect.py --config_file prod.yaml
